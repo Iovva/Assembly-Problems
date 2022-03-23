@@ -1,0 +1,105 @@
+     1                                  bits 32 
+     2                                  global _convert 
+     3                                  
+     4                                  
+     5                                  segment data public data use32
+     6                                  
+     7 00000000 FFFFFFFF                nr_baza_8 dd -1 							; numarul de cifre din numarul in baza 8
+     8                                  
+     9                                  segment code public code use32 
+    10                                  
+    11                                  _convert: 
+    12                                  
+    13 00000000 60                      		pushad
+    14 00000001 55                      		push EBP
+    15 00000002 89E5                    		mov EBP, ESP						; creez un cadru de stiva pentru modul
+    16                                  		
+    17 00000004 8B7508                  		mov ESI, [ebp + 8]					; punem in ESI adresa string-ului ( care reprezinta numarul in baza 2 ) 				
+    18 00000007 B900000000              		mov ECX, 0							; punem in ECX valoarea 0 ( ulterior, in ECX vom avea numarul de cifre din numarul in baza 2)
+    19 0000000C FC                      		cld									; parcurgem sirul de la stanga la dreapta
+    20                                  		
+    21                                  		.repeta1:						
+    22 0000000D AC                      			lodsb							; punem in AL un byte din numarul reprezentat de string, intrucat o cifra a numarului se afla pe un byte
+    23 0000000E 3C00                    			cmp AL, 0						
+    24 00000010 7403                    			je .next						; daca ajungem la finalul cuvantului, incheiem procesul de cautare
+    25 00000012 41                      			inc ECX							; incrementam ECX pentru fiecare cifra din string
+    26 00000013 EBF8                    		jmp .repeta1							
+    27                                  		
+    28                                  		.next:
+    29 00000015 83EE02                  		sub ESI, 2							; punem in ESI adresa ultimei cifre din numarul in baza 2
+    30 00000018 FD                      		std									; parcurgem sirul de la dreapta la stanga 
+    31 00000019 C705[00000000]0000-     		mov dword[nr_baza_8], 0				; punem in variabila numarul de cifre din baza 8
+    31 00000021 0000               
+    32                                  
+    33                                  		.repeta2:
+    34                                  		
+    35 00000023 BA00000000              			mov EDX, 0						; in EDX formam cifrele in baza 8
+    36                                  											; ( conversie rapida din baza 2 in baza 8 :
+    37                                  											;	luam ultimele 3 cifre din numarul in baza 2, si transformam astfel : a2 * 4 + a1 * 2 + a0 * 1,
+    38                                  											;   																	 unde: a2 - ante-penultima cifra
+    39                                  											;																			   a1 - penultima cifra
+    40                                  											;																			   a0 - ultima cifra
+    41                                  											;  		daca sunt mai putin de 3 cifre, se formeaza doar cu cifrele existente
+    42                                  			
+    43 00000028 BB01000000              			mov EBX, 1						; EBX = 1
+    44 0000002D AC                      			lodsb							; punem ultima cifra din numarul in baza 2 in al
+    45 0000002E 2C30                    			sub AL, '0'						; scadem din cifra codul ascii a lui '0';   '0' - > 0
+    46                                  											;											'1' - > 1
+    47 00000030 3C00                    			cmp AL, 0						
+    48 00000032 7402                    			je .next1						; daca e 0, se trece la urmatorul pas
+    49 00000034 01DA                    			add EDX, EBX					; daca e diferita de 0, se aduna 1 la cifra in baza 8, care se afla in formare
+    50                                  			
+    51                                  			.next1:	
+    52 00000036 49                      			dec ECX							; decrementam numarul de cifre ramase din numarul in baza 2
+    53 00000037 E325                    			JECXZ .next4						; daca ECX e 0, nu mai avem cifre in baza 2, sarim la urmatorul pas
+    54                                  			
+    55 00000039 01DB                    			add EBX, EBX					; EBX = 2
+    56 0000003B AC                      			lodsb							; echivalent pentru primul adaos
+    57 0000003C 2C30                    			sub AL, '0'
+    58 0000003E 3C00                    			cmp AL, 0
+    59 00000040 7402                    			je .next2
+    60 00000042 01DA                    			add EDX, EBX
+    61                                  			
+    62                                  			.next2:
+    63 00000044 49                      			dec ECX
+    64 00000045 E317                    			JECXZ .next4
+    65                                  			
+    66 00000047 01DB                    			add EBX, EBX					; EBX = 2
+    67 00000049 AC                      			lodsb							; echivalent pentru primul adaos
+    68 0000004A 2C30                    			sub AL, '0'
+    69 0000004C 3C00                    			cmp AL, 0
+    70 0000004E 7402                    			je .next3
+    71 00000050 01DA                    			add EDX, EBX
+    72                                  			
+    73                                  			.next3:
+    74 00000052 49                      			dec ECX
+    75 00000053 E309                    			JECXZ .next4
+    76                                  			
+    77 00000055 52                      			push EDX						; punem cifra ( in baza 8 ) foramta in EDX pe stiva
+    78                                  											; ( cifrele numarului se formeaza in ordine inversa, le punem pe stiva pentru a le inversa )
+    79 00000056 FF05[00000000]          			inc dword[nr_baza_8]			; de modificat
+    80                                  			
+    81 0000005C EBC5                    		jmp .repeta2			
+    82                                  		
+    83                                  		.next4:								
+    84 0000005E 52                      		push EDX							; punem cifra ( in baza 8 ) foramta din ultimele cifre in EDX pe stiva
+    85 0000005F FF05[00000000]          		inc dword[nr_baza_8]				; de modificat
+    86 00000065 8B0D[00000000]          		mov ECX, [nr_baza_8]				; punem in ECX numarul de cifre ale numarului in baza 8
+    87                                  		
+    88 0000006B B800000000              		mov EAX, 0							; in eax formam cuvantul
+    89                                  		.repeta3:
+    90 00000070 5A                      			pop EDX							; in EDX punem ultima cifra
+    91 00000071 01D0                    			add EAX, EDX					; adaugam la numarul din EAX ( in baza 8 ) ultima cifra
+    92 00000073 BA0A000000              			mov EDX, 10						
+    93 00000078 F7E2                    			mul EDX							; inmultim numarul in baza 8 cu 10 ( pentru a muta cifrele in stanga cu o unitate)
+    94                                  											; practic numarul este returnat in baza 10, dar are forma unui numar in baza 8
+    95 0000007A E2F4                    		LOOP .repeta3							
+    96                                  					
+    97 0000007C BA00000000              		mov EDX, 0							
+    98 00000081 66BB0A00                		mov BX, 10							; impartim numarul cu 10, deoarece este inmultit cu 10 o data in plus 
+    99 00000085 66F7F3                  		div BX
+   100                                  											; avem in EAX numarul
+   101 00000088 89EC                    		mov esp, ebp														
+   102 0000008A 5D                      		pop ebp								; inchid cadrul de stiva pentru modul
+   103 0000008B 61                      		popad
+   104 0000008C C3                      ret 
